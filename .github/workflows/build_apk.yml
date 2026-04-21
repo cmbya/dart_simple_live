@@ -7,41 +7,36 @@ jobs:
   build:
     runs-on: ubuntu-latest
     
-    # ⭐ 关键：告诉 GitHub，所有的命令都要进到 simple_live_app 文件夹里执行
     defaults:
       run:
         working-directory: simple_live_app
 
     steps:
-      # 1. 下载代码
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 2. 安装 Java (安卓编译必备)
       - name: Set up JDK
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
 
-      # 3. 安装 Flutter
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
           cache: true
 
-      # 4. 安装依赖 (现在它会自动去 simple_live_app 里找 pubspec.yaml 了)
       - name: Install dependencies
         run: flutter pub get
 
-      # 5. 编译 APK
+      # ⭐ 这里改成了 --debug，绕过签名检查
       - name: Build APK
-        run: flutter build apk --release
+        run: flutter build apk --debug
 
-      # 6. 上传产物 (注意这里路径也加上了前缀，确保能找到编译好的文件)
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: release-apk
-          path: simple_live_app/build/app/outputs/flutter-apk/app-release.apk
+          name: debug-apk
+          # ⭐ 这里路径也改成了 app-debug.apk
+          path: simple_live_app/build/app/outputs/flutter-apk/app-debug.apk
