@@ -1,44 +1,48 @@
 name: Build Flutter APK
 
-# 允许在 GitHub 页面上手动点击运行
 on:
   workflow_dispatch:
 
 jobs:
   build:
-    # 使用最新的 Ubuntu 环境
     runs-on: ubuntu-latest
+    
+    # ⭐ 关键修改：告诉这个 Job 里的所有 run 命令，默认都在这个文件夹下运行
+    defaults:
+      run:
+        working-directory: my_flutter_app  # <--- 把这里改成你代码所在的文件夹名
 
     steps:
-      # 1. 核心步骤：把你的源代码下载到编译服务器上
+      # 1. 下载代码
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 2. 安装 Java 环境 (安卓编译必须要这个)
+      # 2. 安装 Java
       - name: Set up JDK
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
 
-      # 3. 安装 Flutter SDK
+      # 3. 安装 Flutter
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
           cache: true
 
-      # 4. 下载项目需要的各种插件和依赖库
+      # 4. 安装依赖 (现在它会自动去 my_flutter_app 里找 pubspec.yaml 了)
       - name: Install dependencies
         run: flutter pub get
 
-      # 5. 开始正式编译 Release 版本的 APK
+      # 5. 编译 APK
       - name: Build APK
         run: flutter build apk --release
 
-      # 6. 把编译出来的 APK 文件打包，让你能在 GitHub 页面直接下载
+      # 6. 上传产物
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: release-apk
-          path: build/app/outputs/flutter-apk/app-release.apk
+          # 注意：upload-artifact 的 path 是相对于仓库根目录的，所以这里要带上文件夹前缀
+          path: my_flutter_app/build/app/outputs/flutter-apk/app-release.apk 
