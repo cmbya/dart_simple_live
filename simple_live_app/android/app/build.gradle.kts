@@ -62,8 +62,9 @@ android {
                 signingConfigs.getByName("debug")
             }
 
-            isMinifyEnabled = true
-            isShrinkResources = true
+            // 先关掉，优先保证 release 能稳定打包和运行
+            isMinifyEnabled = false
+            isShrinkResources = false
 
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
