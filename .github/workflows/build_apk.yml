@@ -1,0 +1,44 @@
+openclow机器人: 04-21 14:30:37
+既然已经 Fork 好了，那我们就直接开始！
+现在我给你提供一张「云端编译指令单」（YAML 配置文件）。你只需要把它原封不动地放到你的 GitHub 仓库里，机器人就会自动帮你把 APK 跑出来。
+第一步：创建指令文件
+请按照这个路径在你的 GitHub 仓库中新建一个文件：
+路径： .github/workflows/build_apk.yml
+（注意：.github 文件夹前面有个点，workflows 是文件夹名，build_apk.yml 是文件名）
+文件内容（直接全部复制）：
+name: Build Flutter APK
+允许手动触发运行
+on:
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+下载你的源代码
+      name: Checkout code
+        uses: actions/checkout@v4
+安装 Java 环境 (Android 编译必需)
+      name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+安装 Flutter 环境
+      name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+如果项目有指定版本，可以在这里填写，默认用最新的稳定版
+          cache: true
+获取项目依赖库
+      name: Install dependencies
+        run: flutter pub get
+编译 Release 版本的 APK
+      name: Build APK
+      run: flutter build apk --release
+把编译好的 APK 文件上传到 GitHub 结果页
+      name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
