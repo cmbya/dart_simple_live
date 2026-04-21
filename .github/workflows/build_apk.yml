@@ -7,17 +7,17 @@ jobs:
   build:
     runs-on: ubuntu-latest
     
-    # ⭐ 关键修改：告诉这个 Job 里的所有 run 命令，默认都在这个文件夹下运行
+    # ⭐ 关键：告诉 GitHub，所有的命令都要进到 simple_live_app 文件夹里执行
     defaults:
       run:
-        working-directory: my_flutter_app  # <--- 把这里改成你代码所在的文件夹名
+        working-directory: simple_live_app
 
     steps:
       # 1. 下载代码
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 2. 安装 Java
+      # 2. 安装 Java (安卓编译必备)
       - name: Set up JDK
         uses: actions/setup-java@v4
         with:
@@ -31,7 +31,7 @@ jobs:
           channel: 'stable'
           cache: true
 
-      # 4. 安装依赖 (现在它会自动去 my_flutter_app 里找 pubspec.yaml 了)
+      # 4. 安装依赖 (现在它会自动去 simple_live_app 里找 pubspec.yaml 了)
       - name: Install dependencies
         run: flutter pub get
 
@@ -39,10 +39,9 @@ jobs:
       - name: Build APK
         run: flutter build apk --release
 
-      # 6. 上传产物
+      # 6. 上传产物 (注意这里路径也加上了前缀，确保能找到编译好的文件)
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: release-apk
-          # 注意：upload-artifact 的 path 是相对于仓库根目录的，所以这里要带上文件夹前缀
-          path: my_flutter_app/build/app/outputs/flutter-apk/app-release.apk 
+          path: simple_live_app/build/app/outputs/flutter-apk/app-release.apk
