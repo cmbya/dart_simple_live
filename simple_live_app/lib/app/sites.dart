@@ -1,6 +1,7 @@
 import 'package:simple_live_app/app/constant.dart';
 import 'package:simple_live_app/app/controller/app_settings_controller.dart';
 import 'package:simple_live_core/simple_live_core.dart';
+import 'package:simple_live_core/src/twitch_site.dart';
 
 class Sites {
   static final Map<String, Site> allSites = {
