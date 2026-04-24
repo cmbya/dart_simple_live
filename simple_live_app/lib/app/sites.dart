@@ -28,6 +28,12 @@ class Sites {
       name: "抖音直播",
       liveSite: DouyinSite(),
     ),
+      'twitch': Site(
+        id: 'twitch',
+        logo: "assets/images/twitch.png", // 暂时先写这个路径
+        name: "Twitch",
+        liveSite: TwitchSite(),
+      ),
   };
 
   static List<Site> get supportSites {
