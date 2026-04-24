@@ -8,7 +8,6 @@ import 'model/live_play_quality.dart';
 import 'model/live_play_url.dart';
 import 'model/live_room_detail.dart';
 import 'model/live_room_item.dart';
-import 'model/live_search_result.dart';
 
 class TwitchSite extends LiveSite {
   @override
@@ -17,25 +16,22 @@ class TwitchSite extends LiveSite {
   @override
   String name = "Twitch";
 
-  // Twitch 官方的内部 API 地址和公开免授权密钥
   final String _gqlUrl = 'https://gql.twitch.tv/gql';
   final String _clientId = 'kimne78kx3ncx6brgo4mv6wki5h1ko';
 
-  // 🛠️ 封装一个内部使用的请求方法，拒绝重复写代码
   Future<dynamic> _postGql(Map<String, dynamic> query) async {
     final response = await http.post(
       Uri.parse(_gqlUrl),
       headers: {'Client-Id': _clientId},
-      body: jsonEncode([query]), // Twitch的GQL支持数组批量请求
+      body: jsonEncode([query]), 
     );
     return jsonDecode(response.body)[0]['data'];
   }
 
-  // 🚀 1. 拒绝偷懒：获取真实的 Twitch 首页热门直播！
   @override
   Future<LiveCategoryResult> getRecommendRooms({int page = 1}) async {
     final query = {
-      "query": "query { streams(first: 30) { edges { node { broadcaster { login displayName profileImageURL(width: 50) } title viewersCount previewImageURL(width: 320, height: 180) } } } }"
+      "query": "query { streams(first: 30) { edges { node { broadcaster { login displayName } title viewersCount previewImageURL(width: 320, height: 180) } } } }"
     };
     final data = await _postGql(query);
     List<LiveRoomItem> items = [];
@@ -49,13 +45,12 @@ class TwitchSite extends LiveSite {
         userName: bc['displayName'],
         cover: node['previewImageURL'],
         online: node['viewersCount'],
-        userAvatar: bc['profileImageURL'],
+        // 修复：去掉了不支持的 userAvatar
       ));
     }
     return LiveCategoryResult(hasMore: false, items: items);
   }
 
-  // 🎮 2. 拒绝偷懒：获取真实的 Twitch 游戏分类 (Just Chatting, LOL等)
   @override
   Future<List<LiveCategory>> getCategores() async {
     final query = {
@@ -63,13 +58,13 @@ class TwitchSite extends LiveSite {
     };
     final data = await _postGql(query);
     
-    // Twitch没有斗鱼那种复杂的父子层级，我们建一个总的“热门分类”装进去
-    LiveCategory mainCategory = LiveCategory(id: "all", name: "热门分类");
-    mainCategory.subCategories = [];
+    // 修复：添加了 required 的 children 参数
+    LiveCategory mainCategory = LiveCategory(id: "all", name: "热门分类", children: []);
 
     for (var edge in data['directoriesWithTags']['edges']) {
       var node = edge['node'];
-      mainCategory.subCategories!.add(LiveSubCategory(
+      // 修复：改用 children.add
+      mainCategory.children.add(LiveSubCategory(
         id: node['name'], 
         name: node['name'],
         pic: node['avatarURL'],
@@ -79,11 +74,10 @@ class TwitchSite extends LiveSite {
     return [mainCategory];
   }
 
-  // 📺 3. 拒绝偷懒：获取点击某个游戏后，该游戏下的所有直播间
   @override
   Future<LiveCategoryResult> getCategoryRooms(LiveSubCategory category, {int page = 1}) async {
     final query = {
-      "query": "query(\$game: String!) { game(name: \$game) { streams(first: 30) { edges { node { broadcaster { login displayName profileImageURL(width: 50) } title viewersCount previewImageURL(width: 320, height: 180) } } } } }",
+      "query": "query(\$game: String!) { game(name: \$game) { streams(first: 30) { edges { node { broadcaster { login displayName } title viewersCount previewImageURL(width: 320, height: 180) } } } } }",
       "variables": {"game": category.name}
     };
     final data = await _postGql(query);
@@ -99,14 +93,13 @@ class TwitchSite extends LiveSite {
           userName: bc['displayName'],
           cover: node['previewImageURL'],
           online: node['viewersCount'],
-          userAvatar: bc['profileImageURL'],
+          // 修复：去掉了不支持的 userAvatar
         ));
       }
     }
     return LiveCategoryResult(hasMore: false, items: items);
   }
 
-  // 🚦 4. 拒绝偷懒：获取真实的开播状态和房间详情
   @override
   Future<bool> getLiveStatus({required String roomId}) async {
     final query = {
@@ -114,7 +107,6 @@ class TwitchSite extends LiveSite {
       "variables": {"login": roomId}
     };
     final data = await _postGql(query);
-    // 如果 stream 不为 null，说明正在直播
     return data['user'] != null && data['user']['stream'] != null;
   }
 
@@ -133,14 +125,13 @@ class TwitchSite extends LiveSite {
       title: isLive ? user['stream']['title'] : '未开播 / 离线',
       userName: user != null ? user['displayName'] : roomId,
       cover: '',
-      status: isLive, // 真实状态判断！
+      status: isLive,
       online: isLive ? user['stream']['viewersCount'] : 0,
       url: 'https://www.twitch.tv/$roomId',
-      userAvatar: user != null ? user['profileImageURL'] : '',
+      userAvatar: user != null ? user['profileImageURL'] : '', // LiveRoomDetail 里是允许有这个的，保留
     );
   }
 
-  // 🔌 5. 这里是我们最早写的核心，保持不变
   @override
   Future<LivePlayUrl> getPlayUrls({required LiveRoomDetail detail, required LivePlayQuality quality}) async {
     final roomId = detail.roomId;
@@ -168,13 +159,5 @@ class TwitchSite extends LiveSite {
   @override
   Future<List<LivePlayQuality>> getPlayQualites({required LiveRoomDetail detail}) async {
     return [LivePlayQuality(quality: '原画(Twitch 自适应)', sort: 10000)];
-  }
-
-  // 🔍 6. 附赠简易搜索功能：不管搜什么，直接当成 Twitch ID 处理
-  @override
-  Future<LiveSearchRoomResult> searchRooms(String keyword, {int page = 1}) async {
-      return LiveSearchRoomResult(hasMore: false, items: [
-        LiveRoomItem(roomId: keyword, title: "点击尝试进入该频道的直播间", userName: keyword, cover: "", online: 0)
-      ]);
   }
 }
