@@ -155,6 +155,14 @@ class ParseController extends GetxController {
       var location = await getLocation(u);
       return await parse(location);
     }
+    if (url.contains("twitch.tv")) {
+      // 提取 twitch.tv/ 后面的英文/数字/下划线作为房间ID
+      var regExp = RegExp(r"twitch\.tv/([\w]+)");
+      id = regExp.firstMatch(url)?.group(1) ?? "";
+      
+      // 注意：这里的 'twitch' 必须和你之前在 sites.dart 里填写的名字一模一样
+      return [id, Sites.allSites['twitch']!]; 
+    }
 
     return [];
   }
