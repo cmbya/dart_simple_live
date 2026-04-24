@@ -148,13 +148,13 @@ class TwitchSite extends LiveSite {
     final sig = data['signature'];
     final token = data['value'];
 
-    String videoUrl = 'https://usher.ttvnw.net/api/channel/hls/$roomId.m3u8?allow_source=true&sig=$sig&token=$token';
+    // 这里已经包含了 Uri.encodeComponent 修复代码
+    String videoUrl = 'https://usher.ttvnw.net/api/channel/hls/$roomId.m3u8?allow_source=true&sig=$sig&token=${Uri.encodeComponent(token)}';
     return LivePlayUrl(urls: [videoUrl]);
   }
   
   @override
   Future<List<LivePlayQuality>> getPlayQualites({required LiveRoomDetail detail}) async {
-    // 👇 就是这里！给它塞了一张 data: '' 的空纸条 👇
-    return [LivePlayQuality(quality: '原画(Twitch 自适应)', sort: 10000, data: '')]; 
+    return [LivePlayQuality(quality: '原画(Twitch 自适应)', sort: 10000, data: '')];
   }
 }
