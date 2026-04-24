@@ -128,29 +128,49 @@ class TwitchSite extends LiveSite {
     );
   }
 
+  // 💡 带有“显影魔法”的最简视频流获取代码
   @override
   Future<LivePlayUrl> getPlayUrls({required LiveRoomDetail detail, required LivePlayQuality quality}) async {
-    final roomId = detail.roomId;
-    final body = {
-      "operationName": "PlaybackAccessToken_Template",
-      "query": "query PlaybackAccessToken_Template(\$login: String!, \$isLive: Boolean!, \$vodID: ID!, \$isVod: Boolean!, \$playerType: String!) {  streamPlaybackAccessToken(channelName: \$login, params: {platform: \"web\", playerBackend: \"mediaplayer\", playerType: \$playerType}) @include(if: \$isLive) {    value    signature   } }",
-      "variables": {
-        "isLive": true,
-        "login": roomId,
-        "isVod": false,
-        "vodID": "",
-        "playerType": "site"
-      }
-    };
-    
-    final tokenData = await _postGql(body);
-    final data = tokenData['streamPlaybackAccessToken'];
-    final sig = data['signature'];
-    final token = data['value'];
+    try {
+      final roomId = detail.roomId;
 
-    // 这里已经包含了 Uri.encodeComponent 修复代码
-    String videoUrl = 'https://usher.ttvnw.net/api/channel/hls/$roomId.m3u8?allow_source=true&sig=$sig&token=${Uri.encodeComponent(token)}';
-    return LivePlayUrl(urls: [videoUrl]);
+      final body = {
+        "query": "query { streamPlaybackAccessToken(channelName: \"$roomId\", params: {platform: \"web\", playerBackend: \"mediaplayer\", playerType: \"embed\"}) { value signature } }"
+      };
+
+      final response = await http.post(
+        Uri.parse('https://gql.twitch.tv/gql'),
+        headers: {
+          'Client-Id': 'kimne78kx3ncx6brgo4mv6wki5h1ko',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode(body), 
+      );
+
+      final jsonRes = jsonDecode(response.body);
+
+      // 如果 Twitch 拦截，强行生成错误网址给日志
+      if (jsonRes['errors'] != null) {
+         String errMsg = Uri.encodeComponent(jsonRes['errors'][0]['message'].toString());
+         return LivePlayUrl(urls: ['http://debug.error/api_error_$errMsg.m3u8']);
+      }
+
+      final tokenData = jsonRes['data']['streamPlaybackAccessToken'];
+      if (tokenData == null) {
+         return LivePlayUrl(urls: ['http://debug.error/token_is_null.m3u8']);
+      }
+
+      final sig = tokenData['signature'];
+      final token = tokenData['value'];
+      final randomP = DateTime.now().millisecondsSinceEpoch;
+
+      String videoUrl = 'https://usher.ttvnw.net/api/channel/hls/$roomId.m3u8?allow_source=true&allow_audio_only=true&p=$randomP&sig=$sig&token=${Uri.encodeComponent(token)}';
+
+      return LivePlayUrl(urls: [videoUrl]);
+    } catch (e) {
+      // 代码报错也生成错误网址
+      return LivePlayUrl(urls: ['http://debug.error/code_error_${Uri.encodeComponent(e.toString())}.m3u8']);
+    }
   }
   
   @override
