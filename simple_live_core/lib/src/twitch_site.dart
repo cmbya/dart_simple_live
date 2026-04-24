@@ -45,7 +45,6 @@ class TwitchSite extends LiveSite {
         userName: bc['displayName'],
         cover: node['previewImageURL'],
         online: node['viewersCount'],
-        // 修复：去掉了不支持的 userAvatar
       ));
     }
     return LiveCategoryResult(hasMore: false, items: items);
@@ -58,12 +57,10 @@ class TwitchSite extends LiveSite {
     };
     final data = await _postGql(query);
     
-    // 修复：添加了 required 的 children 参数
     LiveCategory mainCategory = LiveCategory(id: "all", name: "热门分类", children: []);
 
     for (var edge in data['directoriesWithTags']['edges']) {
       var node = edge['node'];
-      // 修复：改用 children.add
       mainCategory.children.add(LiveSubCategory(
         id: node['name'], 
         name: node['name'],
@@ -93,7 +90,6 @@ class TwitchSite extends LiveSite {
           userName: bc['displayName'],
           cover: node['previewImageURL'],
           online: node['viewersCount'],
-          // 修复：去掉了不支持的 userAvatar
         ));
       }
     }
@@ -128,7 +124,7 @@ class TwitchSite extends LiveSite {
       status: isLive,
       online: isLive ? user['stream']['viewersCount'] : 0,
       url: 'https://www.twitch.tv/$roomId',
-      userAvatar: user != null ? user['profileImageURL'] : '', // LiveRoomDetail 里是允许有这个的，保留
+      userAvatar: user != null ? user['profileImageURL'] : '',
     );
   }
 
@@ -158,6 +154,7 @@ class TwitchSite extends LiveSite {
   
   @override
   Future<List<LivePlayQuality>> getPlayQualites({required LiveRoomDetail detail}) async {
-    return [LivePlayQuality(quality: '原画(Twitch 自适应)', sort: 10000)];
+    // 👇 就是这里！给它塞了一张 data: '' 的空纸条 👇
+    return [LivePlayQuality(quality: '原画(Twitch 自适应)', sort: 10000, data: '')]; 
   }
 }
